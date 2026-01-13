@@ -1,225 +1,5 @@
-/*
-// ============================================================================
-// 🧱 INÍCIO DO CÓDIGO BACKEND (GOOGLE APPS SCRIPT)
-// ============================================================================
-// COPIE TUDO DESTE BLOCO E COLE NO SEU EDITOR DE SCRIPTS NA PLANILHA.
-// DEPOIS: CLIQUE EM IMPLANTAR > NOVA IMPLANTAÇÃO > WEB APP > QUALQUER PESSOA.
-
-function doGet(e) {
-  const lock = LockService.getScriptLock();
-  lock.tryLock(10000);
-
-  try {
-    const db = {
-      status: "online",
-      config: lerConfig(),
-      maquinas: lerAba("MAQUINAS"),
-      materiais: lerAba("ESTOQUE"),
-      insumos: lerAba("INSUMO_ACABAMENTO"),
-      marketplaces: lerAba("MARKETPLACES"),
-      historico_vendas: lerAba("VENDAS", 10), 
-      historico_gastos: lerAba("GASTOS", 10)
-    };
-
-    return ContentService
-      .createTextOutput(JSON.stringify(db))
-      .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (erro) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: "error", message: erro.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function doPost(e) {
-  const lock = LockService.getScriptLock();
-  lock.tryLock(10000);
-
-  try {
-    const dados = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // --- 1. REGISTRAR VENDA & BAIXAR ESTOQUE ---
-    if (dados.action === "nova_venda") {
-      const abaVendas = ss.getSheetByName("VENDAS");
-      if (!abaVendas) throw new Error("Aba VENDAS não encontrada");
-      
-      abaVendas.appendRow([
-        new Date(), 
-        dados.produto, 
-        dados.material, 
-        dados.peso, 
-        dados.custo, 
-        dados.venda, 
-        dados.lucro, 
-        dados.canal
-      ]);
-      
-      if (dados.materialId && dados.peso) {
-        atualizarEstoque(dados.materialId, dados.peso * -1);
-      }
-    } 
-    
-    // --- 2. GESTÃO DE ESTOQUE (CRUD) ---
-    else if (dados.action === "novo_material") {
-      const aba = ss.getSheetByName("ESTOQUE");
-      if (!aba) throw new Error("Aba ESTOQUE não encontrada");
-      
-      const novoId = "F" + (Number(aba.getLastRow()) + 1); 
-      // Ordem: ID, Marca, Tipo, Cor, Hex, Peso_Ini, Peso_Atual, Preco
-      aba.appendRow([
-        novoId, 
-        dados.marca, 
-        dados.tipo, 
-        dados.cor, 
-        dados.hex, 
-        dados.peso_inicial, 
-        dados.peso_inicial, 
-        dados.preco
-      ]);
-    }
-    
-    else if (dados.action === "editar_material") {
-      editarLinha("ESTOQUE", dados.id, [
-        dados.marca, 
-        dados.tipo, 
-        dados.cor, 
-        dados.hex, 
-        dados.peso_inicial, 
-        dados.peso_atual, 
-        dados.preco
-      ]);
-    }
-    
-    else if (dados.action === "deletar_material") {
-      deletarLinha("ESTOQUE", dados.id);
-    }
-
-    // --- 3. GASTOS ---
-    else if (dados.action === "novo_gasto") {
-      const aba = ss.getSheetByName("GASTOS");
-      if (!aba) throw new Error("Aba GASTOS não encontrada");
-      aba.appendRow([new Date(), dados.item, dados.categoria, dados.valor, dados.obs || ""]);
-    }
-
-    return ContentService.createTextOutput(JSON.stringify({ result: "success" }))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch (erro) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ result: "error", message: erro.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-// --- FUNÇÕES AUXILIARES ---
-
-function atualizarEstoque(id, deltaPeso) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("ESTOQUE");
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) == String(id)) {
-      // Índice 6 = Coluna G (Peso Atual)
-      const currentVal = Number(data[i][6]); 
-      const newVal = currentVal + Number(deltaPeso);
-      sheet.getRange(i + 1, 7).setValue(newVal);
-      break;
-    }
-  }
-}
-
-function editarLinha(nomeAba, id, novosDados) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nomeAba);
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) == String(id)) {
-      // Atualiza da coluna 2 até o fim
-      sheet.getRange(i + 1, 2, 1, novosDados.length).setValues([novosDados]);
-      break;
-    }
-  }
-}
-
-function deletarLinha(nomeAba, id) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nomeAba);
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) == String(id)) {
-      sheet.deleteRow(i + 1);
-      break;
-    }
-  }
-}
-
-function lerConfig() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CONFIG");
-  if (!sheet) return {}; 
-  const data = sheet.getDataRange().getValues();
-  const config = {};
-  for (let i = 1; i < data.length; i++) {
-    let chave = normalizarChave(data[i][0]);
-    if(chave) config[chave] = data[i][1];
-  }
-  return config;
-}
-
-function lerAba(nomeAba, limite = 0) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nomeAba);
-  if (!sheet) return [];
-  
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return [];
-  
-  let startRow = 2;
-  let numRows = lastRow - 1;
-  
-  if (limite > 0 && numRows > limite) {
-    startRow = lastRow - limite + 1;
-    numRows = limite;
-  }
-  
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const data = sheet.getRange(startRow, 1, numRows, sheet.getLastColumn()).getValues();
-  const result = [];
-  
-  for (let i = 0; i < data.length; i++) {
-    let row = data[i];
-    let obj = {};
-    let hasData = false;
-    for (let j = 0; j < headers.length; j++) {
-      let headerName = normalizarChave(headers[j]);
-      if (headerName) {
-        obj[headerName] = row[j];
-        if (row[j] !== "") hasData = true;
-      }
-    }
-    if (hasData) result.push(obj);
-  }
-  return limite > 0 ? result.reverse() : result;
-}
-
-function normalizarChave(texto) {
-  if (!texto) return "";
-  return texto.toString().toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]/g, "");
-}
-
-// ============================================================================
-// 🛑 FIM DO CÓDIGO BACKEND
-// ============================================================================
-*/
-
-// ============================================================================
-// 🚀 INÍCIO DO FRONTEND (REACT APP)
-// ============================================================================
-
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom/client';
 import { 
   Sword, Scroll, Coins, Hammer, Settings, 
   Package, Ghost, RefreshCw, Wifi, WifiOff, 
@@ -227,11 +7,16 @@ import {
   TrendingUp, Calendar, Trash2, Edit3, Droplet
 } from 'lucide-react';
 
-// 🔗 LINK DA SUA API (Verifique se é o mais recente)
+// ============================================================================
+// 🔗 CONFIGURAÇÃO DA API
+// ============================================================================
 const API_URL = "https://script.google.com/macros/s/AKfycbxdLrwDLHBnR88K1wQlk8MEMt9BKcx_7nNuGXZHF9W3f4aaNiDsZZvHZNMli4vjXp8W/exec";
 
-// --- HELPERS ---
-const getMoneyVal = (obj, possibleKeys) => {
+// ============================================================================
+// 🛠️ HELPERS & UTILS
+// ============================================================================
+
+const getMoneyVal = (obj: any, possibleKeys: string[]) => {
   if (!obj) return 0;
   let rawVal = undefined;
   for (let k of possibleKeys) {
@@ -249,7 +34,7 @@ const getMoneyVal = (obj, possibleKeys) => {
   return isNaN(finalNum) ? 0 : finalNum;
 };
 
-const getStringVal = (obj, possibleKeys) => {
+const getStringVal = (obj: any, possibleKeys: string[]) => {
   if (!obj) return "";
   for (let k of possibleKeys) {
     if (obj[k]) return String(obj[k]);
@@ -260,7 +45,7 @@ const getStringVal = (obj, possibleKeys) => {
   return "";
 };
 
-// --- DADOS OFFLINE ---
+// --- DADOS OFFLINE (FALLBACK) ---
 const DB_OFFLINE = {
   config: { custos_fixos_mensais: 800, horas_operacionais_mes: 160, custo_kwh: 0.95, taxa_falha_media: 0.10, custo_hora_humana: 25 },
   maquinas: [{ id: 'P1', nome: 'OFFLINE MK1', potencia_w: 350, preco_compra: 3500, vida_util_h: 10000, custo_manutencao_ano: 200 }],
@@ -271,25 +56,63 @@ const DB_OFFLINE = {
   historico_vendas: []
 };
 
-// --- ESTILOS ---
+// ============================================================================
+// 🎨 ESTILOS RETRO (CSS-IN-JS)
+// ============================================================================
 const RetroStyles = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+    
+    body {
+      background-color: #1c1917; /* stone-900 */
+      margin: 0;
+      font-family: 'VT323', monospace;
+    }
+
     .font-retro { font-family: 'Press Start 2P', cursive; }
     .font-term { font-family: 'VT323', monospace; }
-    .retro-box { background-color: #fdf6e3; border: 4px solid #2c1a0b; box-shadow: 6px 6px 0px #000000; image-rendering: pixelated; }
-    .retro-btn { transition: all 0.1s; box-shadow: 3px 3px 0px #000000; border: 2px solid #000; }
-    .retro-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px #000000; }
-    .retro-input { background-color: #fff; border: 2px solid #2c1a0b; font-family: 'VT323', monospace; font-size: 1.3rem; color: #000; padding: 0.2rem 0.5rem; }
+    
+    .retro-box { 
+      background-color: #fdf6e3; 
+      border: 4px solid #2c1a0b; 
+      box-shadow: 6px 6px 0px #000000; 
+      image-rendering: pixelated; 
+    }
+    
+    .retro-btn { 
+      transition: all 0.1s; 
+      box-shadow: 3px 3px 0px #000000; 
+      border: 2px solid #000; 
+      cursor: pointer;
+    }
+    .retro-btn:active { 
+      transform: translate(2px, 2px); 
+      box-shadow: 1px 1px 0px #000000; 
+    }
+    
+    .retro-input { 
+      background-color: #fff; 
+      border: 2px solid #2c1a0b; 
+      font-family: 'VT323', monospace; 
+      font-size: 1.3rem; 
+      color: #000; 
+      padding: 0.2rem 0.5rem; 
+    }
+
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
     .blink { animation: blink 1s infinite; }
+    
     ::-webkit-scrollbar { width: 10px; }
     ::-webkit-scrollbar-track { background: #2c1a0b; }
     ::-webkit-scrollbar-thumb { background: #d97706; border: 2px solid #2c1a0b; }
   `}</style>
 );
 
-const RetroCard = ({ title, children, color = "border-gray-800", icon: Icon }) => (
+// ============================================================================
+// 🧩 COMPONENTES UI
+// ============================================================================
+
+const RetroCard = ({ title, children, color = "border-gray-800", icon: Icon }: any) => (
   <div className={`retro-box p-4 mb-6 relative ${color} transition-all`}>
     <div className="flex justify-between items-center mb-4 border-b-2 border-black/10 pb-2">
       <div className="font-retro text-xs md:text-sm text-amber-700 uppercase flex items-center gap-2">
@@ -306,11 +129,12 @@ const RetroCard = ({ title, children, color = "border-gray-800", icon: Icon }) =
   </div>
 );
 
-const SpoolGauge = ({ hex = "#333", current, total }) => {
+const SpoolGauge = ({ hex = "#333", current, total }: any) => {
   const safeTotal = total > 0 ? total : 1000;
   const percentage = Math.min(100, Math.max(0, (current / safeTotal) * 100));
   const isLow = percentage < 20;
   const safeHex = hex && hex.startsWith('#') ? hex : '#333333';
+  
   const style = {
     background: `conic-gradient(${safeHex} ${percentage}%, #e5e7eb ${percentage}% 100%)`,
     boxShadow: `0 0 10px ${safeHex}40`
@@ -328,7 +152,7 @@ const SpoolGauge = ({ hex = "#333", current, total }) => {
   );
 };
 
-const BootScreen = ({ error, onRetry, onOffline }) => (
+const BootScreen = ({ error, onRetry, onOffline }: any) => (
   <div className="min-h-screen bg-black text-green-500 font-term text-xl p-8 flex flex-col justify-center items-center">
     <div className="max-w-2xl w-full space-y-2">
       <p>PRINT QUEST BIOS v5.2</p>
@@ -347,17 +171,21 @@ const BootScreen = ({ error, onRetry, onOffline }) => (
   </div>
 );
 
-// --- STOCK MANAGER ---
-const StockManager = ({ db, onUpdateStock }) => {
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({});
+// ============================================================================
+// 📦 MÓDULOS DO SISTEMA
+// ============================================================================
+
+// --- ESTOQUE ---
+const StockManager = ({ db, onUpdateStock }: any) => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<any>({});
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const materials = db.materiais || [];
 
-  const handleEdit = (mat) => {
+  const handleEdit = (mat: any) => {
     setFormData({
       id: mat.id,
       marca: getStringVal(mat, ['marca']),
@@ -386,7 +214,7 @@ const StockManager = ({ db, onUpdateStock }) => {
     setEditingId(null);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string) => {
     if(!confirm("Tem certeza que quer remover este filamento do inventário?")) return;
     setDeletingId(id);
     await onUpdateStock({ action: "deletar_material", id }, 3000); 
@@ -435,7 +263,7 @@ const StockManager = ({ db, onUpdateStock }) => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {materials.map(mat => {
+        {materials.map((mat: any) => {
           const total = getMoneyVal(mat, ['pesoinicial', 'peso_inicial', 'peso_inicial_g']);
           const current = getMoneyVal(mat, ['pesoatual', 'peso_atual', 'peso_atual_g']);
           const hex = getStringVal(mat, ['hex']);
@@ -476,7 +304,7 @@ const StockManager = ({ db, onUpdateStock }) => {
 };
 
 // --- CALCULADORA ---
-const CalculadoraMaster = ({ db, offlineMode, onSaveSale }) => {
+const CalculadoraMaster = ({ db, offlineMode, onSaveSale }: any) => {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [productName, setProductName] = useState("");
@@ -493,13 +321,13 @@ const CalculadoraMaster = ({ db, offlineMode, onSaveSale }) => {
 
   if (!db.maquinas || !db.maquinas.length) return <div className="text-red-500 font-term">ERRO: DB VAZIO</div>;
 
-  const getVal = (obj, keys, def = 0) => getMoneyVal(obj, keys) || def;
+  const getVal = (obj: any, keys: string[], def = 0) => getMoneyVal(obj, keys) || def;
 
-  const maq = db.maquinas.find(m => m.id === inputs.maquinaId) || db.maquinas[0];
-  const mat = db.materiais.find(m => m.id === inputs.materialId) || db.materiais[0];
-  const mkt = db.marketplaces.find(m => m.id === inputs.marketplaceId) || db.marketplaces[0];
-  const insumo = db.insumos?.find(i => i.id === inputs.insumoId);
-  const emb = db.insumos?.find(i => i.id === inputs.embalagemId);
+  const maq = db.maquinas.find((m: any) => m.id === inputs.maquinaId) || db.maquinas[0];
+  const mat = db.materiais.find((m: any) => m.id === inputs.materialId) || db.materiais[0];
+  const mkt = db.marketplaces.find((m: any) => m.id === inputs.marketplaceId) || db.marketplaces[0];
+  const insumo = db.insumos?.find((i: any) => i.id === inputs.insumoId);
+  const emb = db.insumos?.find((i: any) => i.id === inputs.embalagemId);
 
   const config = {
     custoFixo: getVal(db.config, ['custos_fixos_mensais']),
@@ -562,8 +390,8 @@ const CalculadoraMaster = ({ db, offlineMode, onSaveSale }) => {
           {step === 1 && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block font-term text-gray-500">Máquina</label><select className="retro-input w-full" value={inputs.maquinaId} onChange={e => setInputs({...inputs, maquinaId: e.target.value})}>{db.maquinas.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></div>
-                <div><label className="block font-term text-gray-500">Material</label><select className="retro-input w-full" value={inputs.materialId} onChange={e => setInputs({...inputs, materialId: e.target.value})}>{db.materiais.map(m => <option key={m.id} value={m.id}>{getStringVal(m, ['marca'])} {getStringVal(m, ['tipo'])} ({getStringVal(m, ['cor'])})</option>)}</select></div>
+                <div><label className="block font-term text-gray-500">Máquina</label><select className="retro-input w-full" value={inputs.maquinaId} onChange={e => setInputs({...inputs, maquinaId: e.target.value})}>{db.maquinas.map((m: any) => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></div>
+                <div><label className="block font-term text-gray-500">Material</label><select className="retro-input w-full" value={inputs.materialId} onChange={e => setInputs({...inputs, materialId: e.target.value})}>{db.materiais.map((m: any) => <option key={m.id} value={m.id}>{getStringVal(m, ['marca'])} {getStringVal(m, ['tipo'])} ({getStringVal(m, ['cor'])})</option>)}</select></div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div><label className="block font-term text-gray-500">Peça (g)</label><input type="number" className="retro-input w-full text-right" value={inputs.pesoPeca} onChange={e => setInputs({...inputs, pesoPeca: Number(e.target.value)})} /></div>
@@ -579,14 +407,14 @@ const CalculadoraMaster = ({ db, offlineMode, onSaveSale }) => {
                   <div><label className="block font-term text-gray-500">Pós (min)</label><input type="number" className="retro-input w-full text-right" value={inputs.tempoPos} onChange={e => setInputs({...inputs, tempoPos: Number(e.target.value)})} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                   <div><label className="block font-term text-gray-500">Insumo</label><select className="retro-input w-full" value={inputs.insumoId} onChange={e => setInputs({...inputs, insumoId: e.target.value})}><option value="">Nenhum</option>{db.insumos?.map(i => <option key={i.id} value={i.id}>{i.item}</option>)}</select></div>
-                   <div><label className="block font-term text-gray-500">Embalagem</label><select className="retro-input w-full" value={inputs.embalagemId} onChange={e => setInputs({...inputs, embalagemId: e.target.value})}><option value="">Nenhum</option>{db.insumos?.map(i => <option key={i.id} value={i.id}>{i.item}</option>)}</select></div>
+                   <div><label className="block font-term text-gray-500">Insumo</label><select className="retro-input w-full" value={inputs.insumoId} onChange={e => setInputs({...inputs, insumoId: e.target.value})}><option value="">Nenhum</option>{db.insumos?.map((i: any) => <option key={i.id} value={i.id}>{i.item}</option>)}</select></div>
+                   <div><label className="block font-term text-gray-500">Embalagem</label><select className="retro-input w-full" value={inputs.embalagemId} onChange={e => setInputs({...inputs, embalagemId: e.target.value})}><option value="">Nenhum</option>{db.insumos?.map((i: any) => <option key={i.id} value={i.id}>{i.item}</option>)}</select></div>
                 </div>
              </div>
           )}
           {step === 3 && (
             <div className="space-y-4">
-              <div><label className="block font-term text-gray-500">Canal</label><select className="retro-input w-full" value={inputs.marketplaceId} onChange={e => setInputs({...inputs, marketplaceId: e.target.value})}>{db.marketplaces?.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></div>
+              <div><label className="block font-term text-gray-500">Canal</label><select className="retro-input w-full" value={inputs.marketplaceId} onChange={e => setInputs({...inputs, marketplaceId: e.target.value})}>{db.marketplaces?.map((m: any) => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></div>
               <div className="grid grid-cols-2 gap-4">
                  <div><label className="block font-term text-blue-600">Margem %</label><input type="number" className="retro-input w-full text-right text-blue-800 font-bold" value={inputs.margemLucro} onChange={e => setInputs({...inputs, margemLucro: Number(e.target.value)})} /></div>
                  <div><label className="block font-term text-gray-500">Mkt (R$)</label><input type="number" className="retro-input w-full text-right" value={inputs.investimentoMkt} onChange={e => setInputs({...inputs, investimentoMkt: Number(e.target.value)})} /></div>
@@ -622,8 +450,8 @@ const CalculadoraMaster = ({ db, offlineMode, onSaveSale }) => {
   );
 };
 
-// --- GESTÃO DE GASTOS (LOOT) ---
-const GastosManager = ({ db, onSaveExpense }) => {
+// --- GASTOS ---
+const GastosManager = ({ db, onSaveExpense }: any) => {
   const [item, setItem] = useState("");
   const [valor, setValor] = useState("");
   const [cat, setCat] = useState("MATERIA_PRIMA");
@@ -650,7 +478,7 @@ const GastosManager = ({ db, onSaveExpense }) => {
         <table className="w-full font-term text-lg text-left">
           <thead className="border-b-2 border-black"><tr><th className="p-2">DATA</th><th className="p-2">ITEM</th><th className="p-2 text-right">VALOR</th></tr></thead>
           <tbody>
-            {db.historico_gastos?.map((g, i) => (
+            {db.historico_gastos?.map((g: any, i: number) => (
               <tr key={i} className="border-b border-gray-300">
                 <td className="p-2 text-gray-500">{new Date(g.data).toLocaleDateString()}</td><td className="p-2">{g.item}</td><td className="p-2 text-right text-red-600">- R$ {getMoneyVal(g, ['valor']).toFixed(2)}</td>
               </tr>
@@ -662,11 +490,11 @@ const GastosManager = ({ db, onSaveExpense }) => {
   );
 };
 
-// --- GESTÃO DE VENDAS (SALES) ---
-const SalesManager = ({ db }) => {
+// --- VENDAS ---
+const SalesManager = ({ db }: any) => {
   const sales = db.historico_vendas || [];
-  const totalRevenue = sales.reduce((acc, curr) => acc + getMoneyVal(curr, ['venda', 'vendafinal']), 0);
-  const totalProfit = sales.reduce((acc, curr) => acc + getMoneyVal(curr, ['lucro', 'lucroreal']), 0);
+  const totalRevenue = sales.reduce((acc: number, curr: any) => acc + getMoneyVal(curr, ['venda', 'vendafinal']), 0);
+  const totalProfit = sales.reduce((acc: number, curr: any) => acc + getMoneyVal(curr, ['lucro', 'lucroreal']), 0);
 
   return (
     <div className="animate-in fade-in">
@@ -679,7 +507,7 @@ const SalesManager = ({ db }) => {
           <table className="w-full font-term text-lg text-left">
             <thead className="border-b-2 border-black bg-gray-100"><tr><th className="p-3"><Calendar size={14}/> DATA</th><th className="p-3">PRODUTO</th><th className="p-3">CANAL</th><th className="p-3 text-right">VENDA</th><th className="p-3 text-right">LUCRO</th></tr></thead>
             <tbody>
-              {sales.map((v, i) => (
+              {sales.map((v: any, i: number) => (
                 <tr key={i} className="border-b border-gray-300 hover:bg-white transition-colors"><td className="p-3 text-gray-500 text-sm">{new Date(v.data).toLocaleDateString()}</td><td className="p-3 font-bold text-gray-800">{v.produto}</td><td className="p-3"><span className="text-[10px] bg-gray-200 px-2 py-1 rounded font-retro text-gray-600">{v.canal}</span></td><td className="p-3 text-right text-green-700 font-bold">R$ {getMoneyVal(v, ['venda', 'vendafinal']).toFixed(2)}</td><td className="p-3 text-right text-blue-600">R$ {getMoneyVal(v, ['lucro', 'lucroreal']).toFixed(2)}</td></tr>
               ))}
             </tbody>
@@ -691,13 +519,13 @@ const SalesManager = ({ db }) => {
 };
 
 // --- APP PRINCIPAL ---
-export default function PrintQuestOS() {
+const PrintQuestOS = () => {
   const [activeTab, setActiveTab] = useState('calc');
-  const [db, setDb] = useState(null);
+  const [db, setDb] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [offlineMode, setOfflineMode] = useState(false);
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState<any>(null);
 
   const fetchData = async () => {
     try {
@@ -705,7 +533,7 @@ export default function PrintQuestOS() {
       if (!res.ok) throw new Error("Connection failed");
       const data = await res.json();
       setDb(data); setLoading(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setToast({type: 'error', msg: "Falha na conexão. Ativando modo offline."});
       setDb(DB_OFFLINE); setOfflineMode(true); setLoading(false);
@@ -714,8 +542,7 @@ export default function PrintQuestOS() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Delay aumentado para 3000ms para garantir que o Google processe a deleção
-  const sendData = async (payload, delay = 3000) => {
+  const sendData = async (payload: any, delay = 3000) => {
     try {
       await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) });
       setToast({type: 'success', msg: "Dados gravados no Grimório!"});
@@ -765,5 +592,15 @@ export default function PrintQuestOS() {
         {activeTab === 'gastos' && <GastosManager db={db} onSaveExpense={sendData} />}
       </main>
     </div>
+  );
+}
+
+// Renderiza a aplicação no elemento root
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <PrintQuestOS />
+    </React.StrictMode>
   );
 }
