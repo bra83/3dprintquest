@@ -3,18 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Print Quest OS</title>
+    <title>333 Print Quest</title>
     
-    <!-- 1. FERRAMENTAS (React + Tailwind) -->
+    <!-- 1. FERRAMENTAS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- 2. FONTE RETRO -->
+    <!-- 2. ÍCONES LUCIDE -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+
+    <!-- 3. FONTES RETRO -->
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 
-    <!-- 3. ESTILOS -->
+    <!-- 4. ESTILOS -->
     <style>
         body { 
             background-color: #1c1917; 
@@ -56,12 +60,10 @@
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 10px; }
         ::-webkit-scrollbar-track { background: #2c1a0b; }
         ::-webkit-scrollbar-thumb { background: #d97706; border: 2px solid #2c1a0b; }
         
-        /* Error Screen */
         #error-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0000aa; color: white; padding: 2rem; z-index: 9999; font-family: monospace; }
     </style>
 </head>
@@ -69,12 +71,11 @@
     <div id="root"></div>
     <div id="error-overlay">
         <h1 style="font-size: 2rem; margin-bottom: 1rem;">:( SYSTEM ERROR</h1>
-        <p>Print Quest OS encontrou um problema crítico.</p>
+        <p>333 Print Quest encontrou um problema crítico.</p>
         <pre id="error-message" style="margin-top: 1rem; color: #ffff00; white-space: pre-wrap;"></pre>
         <button onclick="window.location.reload()" style="margin-top: 2rem; padding: 10px 20px; background: white; color: blue; border: none; cursor: pointer; font-weight: bold;">REINICIAR SISTEMA</button>
     </div>
 
-    <!-- 4. SISTEMA DE SEGURANÇA -->
     <script>
         window.onerror = function(message, source, lineno, colno, error) {
             document.getElementById('root').style.display = 'none';
@@ -83,12 +84,11 @@
         };
     </script>
 
-    <!-- 5. LÓGICA DO SISTEMA -->
     <script type="text/babel">
         
         const { useState, useEffect } = React;
         
-        // --- ÍCONES EMBUTIDOS (SVG) PARA GARANTIR FUNCIONAMENTO ---
+        // ÍCONES EMBUTIDOS
         const IconBase = ({ children, size = 24, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                 {children}
@@ -112,13 +112,14 @@
             Trash2: (p) => <IconBase {...p}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></IconBase>,
             Edit3: (p) => <IconBase {...p}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></IconBase>,
             Droplet: (p) => <IconBase {...p}><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></IconBase>,
-            X: (p) => <IconBase {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></IconBase>
+            X: (p) => <IconBase {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></IconBase>,
+            Menu: (p) => <IconBase {...p}><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></IconBase>
         };
 
-        // 🔗 SEU LINK DA API (Atualizado)
+        // 🔗 LINK DA API
         const API_URL = "https://script.google.com/macros/s/AKfycbwjMSC1pSgcvdo-C95fqiCw8WBJHAtlbZ2cFjqX0dd-7hncpzICEjSvY0W0CCAQBMvZ/exec";
 
-        // --- HELPERS (Matemática) ---
+        // --- HELPERS ---
         const getMoneyVal = (obj, possibleKeys) => {
             if (!obj) return 0;
             let rawVal = undefined;
@@ -148,7 +149,7 @@
             return "";
         };
 
-        // --- DADOS OFFLINE (Segurança) ---
+        // --- DADOS OFFLINE ---
         const DB_OFFLINE = {
             config: { custos_fixos_mensais: 800, horas_operacionais_mes: 160, custo_kwh: 0.95, taxa_falha_media: 0.10, custo_hora_humana: 25 },
             maquinas: [{ id: 'P1', nome: 'OFFLINE MK1', potencia_w: 350, preco_compra: 3500, vida_util_h: 10000, custo_manutencao_ano: 200 }],
@@ -159,7 +160,7 @@
             historico_vendas: []
         };
 
-        // --- COMPONENTES VISUAIS (Cards, Gauges) ---
+        // --- COMPONENTES VISUAIS ---
         const RetroCard = ({ title, children, color = "border-gray-800", icon }) => (
             <div className={`retro-box p-4 mb-6 relative ${color} transition-all`}>
                 <div className="flex justify-between items-center mb-4 border-b-2 border-black/10 pb-2">
@@ -201,7 +202,7 @@
         const BootScreen = ({ error, onRetry, onOffline }) => (
             <div className="min-h-screen bg-black text-green-500 font-term text-xl p-8 flex flex-col justify-center items-center">
                 <div className="max-w-2xl w-full space-y-2">
-                    <p>PRINT QUEST BIOS v5.5</p>
+                    <p>333 PRINT QUEST BIOS v5.6</p>
                     <p>LOADING SYSTEM... OK</p>
                     <p>CONNECTING... <span className={error ? "text-red-500" : "blink"}>{error ? "ERROR" : "_"}</span></p>
                     {error && (
@@ -567,6 +568,7 @@
             const [error, setError] = useState(null);
             const [offlineMode, setOfflineMode] = useState(false);
             const [toast, setToast] = useState(null);
+            const [isMenuOpen, setIsMenuOpen] = useState(false); // Mobile Menu State
 
             const fetchData = async () => {
                 try {
@@ -597,32 +599,69 @@
 
             if (loading && !db) return <BootScreen error={error} onRetry={() => window.location.reload()} onOffline={() => {setDb(DB_OFFLINE); setOfflineMode(true); setLoading(false);}} />;
 
+            const tabs = [
+                { id: 'calc', label: 'CRAFT', icon: <Icons.Hammer size={14}/>, color: 'bg-amber-600' },
+                { id: 'estoque', label: 'STOCK', icon: <Icons.Droplet size={14}/>, color: 'bg-purple-600' },
+                { id: 'vendas', label: 'SALES', icon: <Icons.Coins size={14}/>, color: 'bg-green-600' },
+                { id: 'gastos', label: 'LOOT', icon: <Icons.Package size={14}/>, color: 'bg-red-700' },
+            ];
+
             return (
                 <div className="min-h-screen pb-12">
                     {toast && <div className={`fixed top-20 right-4 z-50 px-4 py-3 rounded shadow-lg border-2 border-black font-term flex items-center gap-2 animate-in slide-in-from-right ${toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>{toast.type === 'error' ? "⚠️" : "💾"} {toast.msg}</div>}
                     
                     <header className={`bg-gray-900 border-b-4 ${offlineMode ? 'border-gray-500' : 'border-amber-600'} sticky top-0 z-50 shadow-lg`}>
-                        <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+                        <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center relative">
+                            {/* LOGO */}
                             <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 ${offlineMode ? 'bg-gray-600' : 'bg-amber-600'} border-2 flex items-center justify-center shadow-[2px_2px_0px_#000]`}>
-                                    <Icons.Sword size={20} className="text-white" />
+                                <div className={`${offlineMode ? 'text-gray-500' : 'text-amber-500'}`}>
+                                    <Icons.Sword size={40} />
                                 </div>
                                 <div>
-                                    <h1 className="font-retro text-yellow-400 text-sm md:text-lg tracking-widest drop-shadow-md">PRINT QUEST</h1>
+                                    <h1 className="font-retro text-yellow-400 text-sm md:text-lg tracking-widest drop-shadow-md">333 Print Quest</h1>
                                     <div className="flex items-center gap-2">
                                         <div className={`w-2 h-2 rounded-full ${offlineMode ? 'bg-gray-500' : 'bg-green-500 animate-pulse'}`}></div>
                                         <p className={`font-term text-lg leading-none ${offlineMode ? 'text-gray-400' : 'text-green-400'}`}>{offlineMode ? 'OFFLINE' : 'ONLINE'}</p>
                                     </div>
                                 </div>
                             </div>
-                            <nav className="flex gap-2">
-                                <button onClick={() => setActiveTab('calc')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'calc' ? 'bg-amber-600 text-white' : 'bg-gray-800 text-gray-400'}`}><Icons.Hammer size={14}/> CRAFT</button>
-                                <button onClick={() => setActiveTab('estoque')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'estoque' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'}`}><Icons.Droplet size={14}/> STOCK</button>
-                                <button onClick={() => setActiveTab('vendas')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'vendas' ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400'}`}><Icons.Coins size={14}/> SALES</button>
-                                <button onClick={() => setActiveTab('gastos')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'gastos' ? 'bg-red-700 text-white' : 'bg-gray-800 text-gray-400'}`}><Icons.Package size={14}/> LOOT</button>
+
+                            {/* DESKTOP NAV */}
+                            <nav className="hidden md:flex gap-2">
+                                {tabs.map(tab => (
+                                    <button 
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)} 
+                                        className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === tab.id ? `${tab.color} text-white` : 'bg-gray-800 text-gray-400'}`}
+                                    >
+                                        {tab.icon} {tab.label}
+                                    </button>
+                                ))}
                                 <button onClick={() => window.location.reload()} className="retro-btn px-2 bg-gray-800 text-gray-400"><Icons.RefreshCw size={14}/></button>
                             </nav>
+
+                            {/* MOBILE HAMBURGER */}
+                            <button className="md:hidden text-white" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                                {isMenuOpen ? <Icons.X size={32} /> : <Icons.Menu size={32} />}
+                            </button>
                         </div>
+
+                        {/* MOBILE MENU DROPDOWN */}
+                        {isMenuOpen && (
+                            <div className="md:hidden absolute w-full bg-gray-900 border-b-4 border-amber-600 z-50 animate-in slide-in-from-top duration-300">
+                                <div className="flex flex-col p-4 gap-3">
+                                    {tabs.map(tab => (
+                                        <button 
+                                            key={tab.id}
+                                            onClick={() => { setActiveTab(tab.id); setIsMenuOpen(false); }} 
+                                            className={`retro-btn px-4 py-4 font-retro text-sm flex gap-3 justify-center ${activeTab === tab.id ? `${tab.color} text-white` : 'bg-gray-800 text-gray-400'}`}
+                                        >
+                                            {tab.icon} {tab.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </header>
 
                     <main className="max-w-6xl mx-auto px-4 py-8">
