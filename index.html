@@ -11,7 +11,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- 2. ÍCONES LUCIDE (Versão UMD para navegador) -->
+    <!-- 2. ÍCONES LUCIDE (Versão UMD Corrigida) -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
 
@@ -24,6 +24,7 @@
             background-color: #1c1917; /* stone-900 */
             margin: 0; 
             font-family: 'VT323', monospace; 
+            color: #e7e5e4;
         }
         
         .font-retro { font-family: 'Press Start 2P', cursive; }
@@ -34,6 +35,7 @@
             border: 4px solid #2c1a0b; 
             box-shadow: 6px 6px 0px #000000; 
             image-rendering: pixelated; 
+            color: #1c1917;
         }
         
         .retro-btn { 
@@ -54,34 +56,77 @@
             padding: 0.2rem 0.5rem; 
         }
 
+        /* Animações */
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         .blink { animation: blink 1s infinite; }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         
         /* Scrollbar */
         ::-webkit-scrollbar { width: 10px; }
         ::-webkit-scrollbar-track { background: #2c1a0b; }
         ::-webkit-scrollbar-thumb { background: #d97706; border: 2px solid #2c1a0b; }
+        
+        /* Error Screen */
+        #error-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0000aa; color: white; padding: 2rem; z-index: 9999; font-family: monospace; }
     </style>
 </head>
 <body>
     <div id="root"></div>
+    <div id="error-overlay">
+        <h1 style="font-size: 2rem; margin-bottom: 1rem;">:( SYSTEM ERROR</h1>
+        <p>Print Quest OS encontrou um problema crítico.</p>
+        <pre id="error-message" style="margin-top: 1rem; color: #ffff00; white-space: pre-wrap;"></pre>
+        <button onclick="window.location.reload()" style="margin-top: 2rem; padding: 10px 20px; background: white; color: blue; border: none; cursor: pointer; font-weight: bold;">REINICIAR SISTEMA</button>
+    </div>
 
-    <!-- 5. LÓGICA DO SISTEMA -->
+    <!-- 5. SISTEMA DE SEGURANÇA (Global Error Handler) -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            document.getElementById('root').style.display = 'none';
+            document.getElementById('error-overlay').style.display = 'block';
+            document.getElementById('error-message').textContent = `MSG: ${message}\nSRC: ${source}:${lineno}\nSTACK: ${error ? error.stack : 'N/A'}`;
+        };
+    </script>
+
+    <!-- 6. LÓGICA DO SISTEMA (React) -->
     <script type="text/babel">
         
-        // --- PREPARAÇÃO DO AMBIENTE ---
         const { useState, useEffect } = React;
         
-        // Captura os ícones do pacote global (sem import)
-        const { 
-            Sword, Scroll, Coins, Hammer, Settings, 
-            Package, Ghost, RefreshCw, Wifi, WifiOff, 
-            ChevronRight, AlertTriangle, Terminal, X, Save, PlusCircle,
-            TrendingUp, Calendar, Trash2, Edit3, Droplet
-        } = window.LucideReact;
+        // --- CARREGAMENTO SEGURO DE ÍCONES ---
+        // Tenta encontrar a biblioteca no window.lucideReact ou window.LucideReact
+        const LucideIcons = window.lucideReact || window.LucideReact || window.lucide || {};
+        
+        // Fallback: Se o ícone não existir, renderiza um span vazio para não quebrar o app
+        const Icon = (name, props) => {
+            const IconComponent = LucideIcons[name];
+            return IconComponent ? <IconComponent {...props} /> : <span>?</span>;
+        };
+
+        // Atalhos para ícones comuns usados no app
+        const Icons = {
+            Sword: (p) => Icon('Sword', p),
+            Scroll: (p) => Icon('Scroll', p),
+            Coins: (p) => Icon('Coins', p),
+            Hammer: (p) => Icon('Hammer', p),
+            Settings: (p) => Icon('Settings', p),
+            Package: (p) => Icon('Package', p),
+            Ghost: (p) => Icon('Ghost', p),
+            RefreshCw: (p) => Icon('RefreshCw', p),
+            AlertTriangle: (p) => Icon('AlertTriangle', p),
+            Save: (p) => Icon('Save', p),
+            PlusCircle: (p) => Icon('PlusCircle', p),
+            TrendingUp: (p) => Icon('TrendingUp', p),
+            Calendar: (p) => Icon('Calendar', p),
+            Trash2: (p) => Icon('Trash2', p),
+            Edit3: (p) => Icon('Edit3', p),
+            Droplet: (p) => Icon('Droplet', p),
+            X: (p) => Icon('X', p)
+        };
 
         // 🔗 SEU LINK DA API (Atualizado)
-        const API_URL = "https://script.google.com/macros/s/AKfycbzp12rZiRpiKQIOl9RQaH8ww4rRCeDD2gQ7zPIv8si3OVNu-QWrRomQNWO4PsoOQKXN/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbwjMSC1pSgcvdo-C95fqiCw8WBJHAtlbZ2cFjqX0dd-7hncpzICEjSvY0W0CCAQBMvZ/exec";
 
         // --- HELPERS (Matemática) ---
         const getMoneyVal = (obj, possibleKeys) => {
@@ -158,7 +203,7 @@
                             {percentage.toFixed(0)}%
                         </span>
                     </div>
-                    {isLow && <div className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 border-2 border-white z-20 shadow-md">⚠️</div>}
+                    {isLow && <div className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 border-2 border-white z-20 shadow-md"><Icons.AlertTriangle size={12} /></div>}
                 </div>
             );
         };
@@ -166,7 +211,7 @@
         const BootScreen = ({ error, onRetry, onOffline }) => (
             <div className="min-h-screen bg-black text-green-500 font-term text-xl p-8 flex flex-col justify-center items-center">
                 <div className="max-w-2xl w-full space-y-2">
-                    <p>PRINT QUEST BIOS v5.4</p>
+                    <p>PRINT QUEST BIOS v5.5</p>
                     <p>LOADING SYSTEM... OK</p>
                     <p>CONNECTING... <span className={error ? "text-red-500" : "blink"}>{error ? "ERROR" : "_"}</span></p>
                     {error && (
@@ -232,14 +277,14 @@
                 <div className="animate-in fade-in">
                     <div className="flex justify-end mb-6">
                         <button onClick={handleNew} className="retro-btn bg-blue-600 text-white px-4 py-2 font-retro text-xs flex gap-2 items-center">
-                            <PlusCircle size={16}/> NOVO CARRETEL
+                            <Icons.PlusCircle size={16}/> NOVO CARRETEL
                         </button>
                     </div>
 
                     {editingId && (
                         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
                             <div className="retro-box bg-[#fdf6e3] w-full max-w-lg p-6 relative">
-                                <button onClick={() => setEditingId(null)} className="absolute top-2 right-2 text-gray-500 hover:text-red-500"><X/></button>
+                                <button onClick={() => setEditingId(null)} className="absolute top-2 right-2 text-gray-500 hover:text-red-500"><Icons.X /></button>
                                 <h2 className="font-retro text-sm text-amber-700 mb-4 border-b-2 border-black/10 pb-2">
                                     {isNew ? "NOVO ITEM" : "EDITAR ITEM"}
                                 </h2>
@@ -263,7 +308,7 @@
                                     <div><label className="font-term text-gray-500">R$/Kg</label><input type="number" className="retro-input w-full text-right" value={formData.preco} onChange={e => setFormData({...formData, preco: Number(e.target.value)})} /></div>
                                 </div>
                                 <button onClick={handleSave} disabled={saving} className="w-full retro-btn bg-green-600 text-white py-3 font-retro text-xs flex justify-center gap-2">
-                                    {saving ? <RefreshCw className="animate-spin"/> : <Save size={16}/>} SALVAR DADOS
+                                    {saving ? "⏳..." : <><Icons.Save size={16}/> SALVAR DADOS</>}
                                 </button>
                             </div>
                         </div>
@@ -277,7 +322,7 @@
                             const isDeleting = deletingId === mat.id;
                             
                             return (
-                                <RetroCard key={mat.id} title={getStringVal(mat, ['marca'])} color={isDeleting ? "border-red-500 opacity-50" : "border-gray-400"} icon={<Package size={16}/>}>
+                                <RetroCard key={mat.id} title={getStringVal(mat, ['marca'])} color={isDeleting ? "border-red-500 opacity-50" : "border-gray-400"} icon={<Icons.Package size={16}/>}>
                                     <div className="flex gap-4 items-center">
                                         <div className="flex-shrink-0">
                                             <SpoolGauge hex={hex} current={current} total={total} />
@@ -297,8 +342,8 @@
                                             <span className="text-red-600 font-retro text-xs animate-pulse">DELETANDO...</span>
                                         ) : (
                                             <>
-                                                <button onClick={() => handleEdit(mat)} className="text-gray-500 hover:text-blue-600 p-1"><Edit3 size={18}/></button>
-                                                <button onClick={() => handleDelete(mat.id)} className="text-gray-500 hover:text-red-600 p-1"><Trash2 size={18}/></button>
+                                                <button onClick={() => handleEdit(mat)} className="text-gray-500 hover:text-blue-600 p-1"><Icons.Edit3 size={18}/></button>
+                                                <button onClick={() => handleDelete(mat.id)} className="text-gray-500 hover:text-red-600 p-1"><Icons.Trash2 size={18}/></button>
                                             </>
                                         )}
                                     </div>
@@ -390,7 +435,7 @@
             return (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in">
                     <div>
-                        <RetroCard title="Parâmetros" icon={<Settings size={16}/>} color="border-gray-600">
+                        <RetroCard title="Parâmetros" icon={<Icons.Settings size={16}/>} color="border-gray-600">
                             <div className="flex border-b-2 border-black/10 mb-4 pb-2 gap-4">
                                 {[1, 2, 3].map(s => <button key={s} onClick={() => setStep(s)} className={`font-retro text-xs ${step===s ? 'text-amber-600 underline' : 'text-gray-400'}`}>STEP {s}</button>)}
                             </div>
@@ -432,7 +477,7 @@
                     </div>
 
                     <div>
-                        <RetroCard title="Oráculo Financeiro" icon={<Scroll size={16}/>} color="border-amber-700">
+                        <RetroCard title="Oráculo Financeiro" icon={<Icons.Scroll size={16}/>} color="border-amber-700">
                             <div className="bg-white p-4 font-term text-lg border-2 border-dashed border-gray-400 relative">
                                 <div className="flex justify-between font-bold border-b border-black mb-2"><span>CUSTO TOTAL</span> <span>R$ {custoProducao.toFixed(2)}</span></div>
                                 <div className="flex justify-between font-bold border-b border-black mb-4"><span>TAXAS/EXTRAS</span> <span>R$ {(precoVenda - custoProducao - lucroLiquido).toFixed(2)}</span></div>
@@ -447,8 +492,7 @@
                             <div className="mt-4 space-y-2">
                                 <input type="text" placeholder="Nome do Produto (ex: Vaso Dragon)" className="retro-input w-full mb-2" value={productName} onChange={e => setProductName(e.target.value)} />
                                 <button onClick={handleSave} disabled={saving || offlineMode} className={`w-full retro-btn py-3 font-retro text-xs text-white flex items-center justify-center gap-2 ${saving ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-400'}`}>
-                                    {saving ? <RefreshCw className="animate-spin" /> : <Save size={16} />} 
-                                    {saving ? "GRAVANDO..." : "REGISTRAR VENDA & BAIXAR ESTOQUE"}
+                                    {saving ? "⏳..." : <><Icons.Save size={16} /> REGISTRAR VENDA</>}
                                 </button>
                             </div>
                         </RetroCard>
@@ -473,15 +517,15 @@
 
             return (
                 <div className="animate-in fade-in">
-                    <RetroCard title="Registrar Loot (Despesa)" icon={<Package size={16}/>} color="border-red-700">
+                    <RetroCard title="Registrar Loot (Despesa)" icon={<Icons.Package size={16}/>} color="border-red-700">
                         <div className="flex flex-col md:flex-row gap-4 items-end">
                             <div className="flex-1 w-full"><label className="font-term text-gray-500">Item</label><input className="retro-input w-full" value={item} onChange={e => setItem(e.target.value)} placeholder="Ex: Manutenção Bico" /></div>
                             <div className="w-full md:w-32"><label className="font-term text-gray-500">Valor (R$)</label><input type="number" className="retro-input w-full" value={valor} onChange={e => setValor(e.target.value)} placeholder="0.00" /></div>
                             <div className="w-full md:w-48"><label className="font-term text-gray-500">Categoria</label><select className="retro-input w-full" value={cat} onChange={e => setCat(e.target.value)}><option value="MATERIA_PRIMA">Matéria Prima</option><option value="MANUTENCAO">Manutenção</option><option value="FERRAMENTA">Ferramenta</option><option value="FIXO">Custo Fixo</option></select></div>
-                            <button onClick={handleSave} disabled={saving} className="retro-btn bg-red-600 text-white p-3 md:w-auto w-full flex justify-center">{saving ? <RefreshCw className="animate-spin" /> : <PlusCircle />}</button>
+                            <button onClick={handleSave} disabled={saving} className="retro-btn bg-red-600 text-white p-3 md:w-auto w-full flex justify-center">{saving ? "⏳" : <Icons.PlusCircle />}</button>
                         </div>
                     </RetroCard>
-                    <RetroCard title="Histórico Recente" icon={<Scroll size={16}/>} color="border-gray-500">
+                    <RetroCard title="Histórico Recente" icon={<Icons.Scroll size={16}/>} color="border-gray-500">
                         <table className="w-full font-term text-lg text-left">
                             <thead className="border-b-2 border-black"><tr><th className="p-2">DATA</th><th className="p-2">ITEM</th><th className="p-2 text-right">VALOR</th></tr></thead>
                             <tbody>
@@ -506,13 +550,13 @@
             return (
                 <div className="animate-in fade-in">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <RetroCard title="Faturamento (Recente)" icon={<Coins size={16}/>} color="border-green-600"><div className="text-center py-2"><span className="font-term text-4xl text-green-700">R$ {totalRevenue.toFixed(2)}</span><p className="text-xs font-retro text-gray-500 mt-2">TOTAL LISTADO</p></div></RetroCard>
-                        <RetroCard title="Lucro Líquido (Recente)" icon={<TrendingUp size={16}/>} color="border-blue-600"><div className="text-center py-2"><span className="font-term text-4xl text-blue-700">R$ {totalProfit.toFixed(2)}</span><p className="text-xs font-retro text-gray-500 mt-2">MARGEM REAL</p></div></RetroCard>
+                        <RetroCard title="Faturamento (Recente)" icon={<Icons.Coins size={16}/>} color="border-green-600"><div className="text-center py-2"><span className="font-term text-4xl text-green-700">R$ {totalRevenue.toFixed(2)}</span><p className="text-xs font-retro text-gray-500 mt-2">TOTAL LISTADO</p></div></RetroCard>
+                        <RetroCard title="Lucro Líquido (Recente)" icon={<Icons.TrendingUp size={16}/>} color="border-blue-600"><div className="text-center py-2"><span className="font-term text-4xl text-blue-700">R$ {totalProfit.toFixed(2)}</span><p className="text-xs font-retro text-gray-500 mt-2">MARGEM REAL</p></div></RetroCard>
                     </div>
-                    <RetroCard title="Histórico de Vendas" icon={<Scroll size={16}/>} color="border-gray-500">
+                    <RetroCard title="Histórico de Vendas" icon={<Icons.Scroll size={16}/>} color="border-gray-500">
                         <div className="overflow-x-auto">
                             <table className="w-full font-term text-lg text-left">
-                                <thead className="border-b-2 border-black bg-gray-100"><tr><th className="p-3"><Calendar size={14}/> DATA</th><th className="p-3">PRODUTO</th><th className="p-3">CANAL</th><th className="p-3 text-right">VENDA</th><th className="p-3 text-right">LUCRO</th></tr></thead>
+                                <thead className="border-b-2 border-black bg-gray-100"><tr><th className="p-3"><Icons.Calendar size={14}/> DATA</th><th className="p-3">PRODUTO</th><th className="p-3">CANAL</th><th className="p-3 text-right">VENDA</th><th className="p-3 text-right">LUCRO</th></tr></thead>
                                 <tbody>
                                     {sales.map((v, i) => (
                                         <tr key={i} className="border-b border-gray-300 hover:bg-white transition-colors"><td className="p-3 text-gray-500 text-sm">{new Date(v.data).toLocaleDateString()}</td><td className="p-3 font-bold text-gray-800">{v.produto}</td><td className="p-3"><span className="text-[10px] bg-gray-200 px-2 py-1 rounded font-retro text-gray-600">{v.canal}</span></td><td className="p-3 text-right text-green-700 font-bold">R$ {getMoneyVal(v, ['venda', 'vendafinal']).toFixed(2)}</td><td className="p-3 text-right text-blue-600">R$ {getMoneyVal(v, ['lucro', 'lucroreal']).toFixed(2)}</td></tr>
@@ -525,7 +569,7 @@
             );
         };
 
-        // --- APP PRINCIPAL ---
+        // --- APP ROOT ---
         const PrintQuestOS = () => {
             const [activeTab, setActiveTab] = useState('calc');
             const [db, setDb] = useState(null);
@@ -565,13 +609,13 @@
 
             return (
                 <div className="min-h-screen pb-12">
-                    {toast && <div className={`fixed top-20 right-4 z-50 px-4 py-3 rounded shadow-lg border-2 border-black font-term flex items-center gap-2 animate-in slide-in-from-right ${toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>{toast.type === 'error' ? <AlertTriangle size={18}/> : <Save size={18}/>} {toast.msg}</div>}
+                    {toast && <div className={`fixed top-20 right-4 z-50 px-4 py-3 rounded shadow-lg border-2 border-black font-term flex items-center gap-2 animate-in slide-in-from-right ${toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>{toast.type === 'error' ? "⚠️" : "💾"} {toast.msg}</div>}
                     
                     <header className={`bg-gray-900 border-b-4 ${offlineMode ? 'border-gray-500' : 'border-amber-600'} sticky top-0 z-50 shadow-lg`}>
                         <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
                             <div className="flex items-center gap-3">
                                 <div className={`w-10 h-10 ${offlineMode ? 'bg-gray-600' : 'bg-amber-600'} border-2 flex items-center justify-center shadow-[2px_2px_0px_#000]`}>
-                                    <Sword size={20} className="text-white" />
+                                    <Icons.Sword size={20} className="text-white" />
                                 </div>
                                 <div>
                                     <h1 className="font-retro text-yellow-400 text-sm md:text-lg tracking-widest drop-shadow-md">PRINT QUEST</h1>
@@ -582,11 +626,11 @@
                                 </div>
                             </div>
                             <nav className="flex gap-2">
-                                <button onClick={() => setActiveTab('calc')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'calc' ? 'bg-amber-600 text-white' : 'bg-gray-800 text-gray-400'}`}><Hammer size={14}/> CRAFT</button>
-                                <button onClick={() => setActiveTab('estoque')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'estoque' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'}`}><Droplet size={14}/> STOCK</button>
-                                <button onClick={() => setActiveTab('vendas')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'vendas' ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400'}`}><Coins size={14}/> SALES</button>
-                                <button onClick={() => setActiveTab('gastos')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'gastos' ? 'bg-red-700 text-white' : 'bg-gray-800 text-gray-400'}`}><Package size={14}/> LOOT</button>
-                                <button onClick={() => window.location.reload()} className="retro-btn px-2 bg-gray-800 text-gray-400"><RefreshCw size={14}/></button>
+                                <button onClick={() => setActiveTab('calc')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'calc' ? 'bg-amber-600 text-white' : 'bg-gray-800 text-gray-400'}`}><Icons.Hammer size={14}/> CRAFT</button>
+                                <button onClick={() => setActiveTab('estoque')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'estoque' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'}`}><Icons.Droplet size={14}/> STOCK</button>
+                                <button onClick={() => setActiveTab('vendas')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'vendas' ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400'}`}><Icons.Coins size={14}/> SALES</button>
+                                <button onClick={() => setActiveTab('gastos')} className={`retro-btn px-3 py-2 font-retro text-xs flex gap-2 ${activeTab === 'gastos' ? 'bg-red-700 text-white' : 'bg-gray-800 text-gray-400'}`}><Icons.Package size={14}/> LOOT</button>
+                                <button onClick={() => window.location.reload()} className="retro-btn px-2 bg-gray-800 text-gray-400"><Icons.RefreshCw size={14}/></button>
                             </nav>
                         </div>
                     </header>
