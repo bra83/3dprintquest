@@ -2,9 +2,39 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>333 Print Quest</title>
     
+    <!-- PWA: MANIFESTO EMBUTIDO (Data URI) -->
+    <link rel="manifest" id="manifest-placeholder">
+    <script>
+        const manifest = {
+            "name": "333 Print Quest",
+            "short_name": "PrintQuest",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#1f2416",
+            "theme_color": "#1f2416",
+            "orientation": "portrait",
+            "icons": [{
+                "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%231f2416'/%3E%3Cpath d='M256 32 L320 96 L288 128 L352 192 L320 224 L384 288 L256 416 L128 288 L192 224 L160 192 L224 128 L192 96 Z' fill='%23f8d878' stroke='%23603813' stroke-width='20'/%3E%3Cpath d='M256 416 L256 480' stroke='%23f8d878' stroke-width='40'/%3E%3C/svg%3E",
+                "sizes": "512x512",
+                "type": "image/svg+xml"
+            }]
+        };
+        const stringManifest = JSON.stringify(manifest);
+        const blob = new Blob([stringManifest], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(blob);
+        document.querySelector('#manifest-placeholder').setAttribute('href', manifestURL);
+    </script>
+
+    <!-- PWA: META TAGS iOS/MOBILE -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Print Quest">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%231f2416'/%3E%3Cpath d='M256 32 L320 96 L288 128 L352 192 L320 224 L384 288 L256 416 L128 288 L192 224 L160 192 L224 128 L192 96 Z' fill='%23f8d878' stroke='%23603813' stroke-width='20'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%231f2416'/%3E%3Cpath d='M256 32 L320 96 L288 128 L352 192 L320 224 L384 288 L256 416 L128 288 L192 224 L160 192 L224 128 L192 96 Z' fill='%23f8d878' stroke='%23603813' stroke-width='20'/%3E%3C/svg%3E">
+
     <!-- 1. FERRAMENTAS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -21,12 +51,12 @@
     <!-- 4. ESTILOS ZELDA -->
     <style>
         :root {
-            --zelda-bg: #1f2416;         /* Fundo escuro esverdeado */
-            --zelda-gold: #f8d878;       /* Ouro Triforce */
-            --zelda-green: #00a800;      /* Verde Link */
-            --zelda-brown: #603813;      /* Marrom Madeira/Couro */
-            --zelda-paper: #fcf0c8;      /* Bege Pergaminho */
-            --zelda-red: #e60012;        /* Vermelho Coração */
+            --zelda-bg: #1f2416;         
+            --zelda-gold: #f8d878;       
+            --zelda-green: #00a800;      
+            --zelda-brown: #603813;      
+            --zelda-paper: #fcf0c8;      
+            --zelda-red: #e60012;        
         }
 
         body { 
@@ -34,12 +64,13 @@
             margin: 0; 
             font-family: 'VT323', monospace; 
             color: var(--zelda-paper);
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none; /* Evita pull-to-refresh no app */
         }
         
         .font-retro { font-family: 'Press Start 2P', cursive; }
         .font-term { font-family: 'VT323', monospace; }
         
-        /* Caixas estilo Menu Zelda */
         .retro-box { 
             background-color: var(--zelda-paper); 
             border: 4px solid var(--zelda-brown); 
@@ -69,7 +100,7 @@
             border-radius: 2px;
         }
 
-        /* Cores de Botão Específicas */
+        /* Cores de Botão */
         .btn-green { background-color: var(--zelda-green); color: white; }
         .btn-red { background-color: var(--zelda-red); color: white; }
         .btn-blue { background-color: #0078d7; color: white; }
@@ -81,11 +112,15 @@
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         
         /* Scrollbar */
-        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--zelda-bg); }
-        ::-webkit-scrollbar-thumb { background: var(--zelda-gold); border: 2px solid var(--zelda-brown); }
+        ::-webkit-scrollbar-thumb { background: var(--zelda-gold); border: 1px solid var(--zelda-brown); border-radius: 4px; }
         
         #error-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #800000; color: white; padding: 2rem; z-index: 9999; font-family: monospace; }
+        
+        /* Ajuste para Notch do iPhone */
+        header { padding-top: env(safe-area-inset-top); }
+        main { padding-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
 <body>
@@ -134,7 +169,8 @@
             Edit3: (p) => <IconBase {...p}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></IconBase>,
             Droplet: (p) => <IconBase {...p}><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></IconBase>,
             X: (p) => <IconBase {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></IconBase>,
-            Menu: (p) => <IconBase {...p}><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></IconBase>
+            Menu: (p) => <IconBase {...p}><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></IconBase>,
+            Download: (p) => <IconBase {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></IconBase>
         };
 
         // 🔗 LINK DA API
@@ -203,7 +239,6 @@
             const isLow = percentage < 20;
             const safeHex = hex && hex.startsWith('#') ? hex : '#333333';
             
-            // Estilo mais "plano" e retro
             const style = {
                 background: `conic-gradient(${safeHex} ${percentage}%, #d1c4a0 ${percentage}% 100%)`,
                 boxShadow: 'inset 0 0 0 4px rgba(0,0,0,0.1)'
@@ -459,7 +494,7 @@
                                     </div>
                                     <div className="grid grid-cols-3 gap-4">
                                         <div><label className="block font-term text-gray-500">Peça (g)</label><input type="number" className="retro-input w-full text-right" value={inputs.pesoPeca} onChange={e => setInputs({...inputs, pesoPeca: Number(e.target.value)})} /></div>
-                                        <div><label className="block font-term text-gray-500">Suporte</label><input type="number" className="retro-input w-full text-right text-red-600" value={inputs.pesoSuporte} onChange={e => setInputs({...inputs, pesoSuporte: Number(e.target.value)})} /></div>
+                                        <div><label className="block font-term text-gray-500">Suporte</label><input type="number" className="retro-input w-full text-right text-[#e60012]" value={inputs.pesoSuporte} onChange={e => setInputs({...inputs, pesoSuporte: Number(e.target.value)})} /></div>
                                         <div><label className="block font-term text-gray-500">Tempo (h)</label><input type="number" className="retro-input w-full text-right" value={inputs.tempoPrint} onChange={e => setInputs({...inputs, tempoPrint: Number(e.target.value)})} /></div>
                                     </div>
                                 </div>
@@ -480,7 +515,7 @@
                                 <div className="space-y-4">
                                     <div><label className="block font-term text-gray-500">Canal</label><select className="retro-input w-full" value={inputs.marketplaceId} onChange={e => setInputs({...inputs, marketplaceId: e.target.value})}>{db.marketplaces?.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></div>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div><label className="block font-term text-blue-600">Margem %</label><input type="number" className="retro-input w-full text-right text-blue-800 font-bold" value={inputs.margemLucro} onChange={e => setInputs({...inputs, margemLucro: Number(e.target.value)})} /></div>
+                                        <div><label className="block font-term text-[#0078d7]">Margem %</label><input type="number" className="retro-input w-full text-right text-[#0078d7] font-bold" value={inputs.margemLucro} onChange={e => setInputs({...inputs, margemLucro: Number(e.target.value)})} /></div>
                                         <div><label className="block font-term text-gray-500">Mkt (R$)</label><input type="number" className="retro-input w-full text-right" value={inputs.investimentoMkt} onChange={e => setInputs({...inputs, investimentoMkt: Number(e.target.value)})} /></div>
                                     </div>
                                 </div>
