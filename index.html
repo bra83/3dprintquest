@@ -3,11 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1f2416">
     <title>333 Print Quest</title>
     
-    <!-- PWA: MANIFESTO EMBUTIDO (Data URI) -->
-    <link rel="manifest" id="manifest-placeholder">
+    <!-- ================================================================== -->
+    <!-- 📱 CONFIGURAÇÃO PWA & ÍCONES (APP NATIVO) -->
+    <!-- ================================================================== -->
+    
+    <!-- Ícone SVG desenhado "na mão" para garantir que não dependa de links externos -->
     <script>
+        // Ícone: Fundo Verde Zelda, Borda Dourada, Espada Pixelada no meio
+        const iconSVG = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+            <rect x="0" y="0" width="512" height="512" rx="100" fill="#1f2416" stroke="#f8d878" stroke-width="20"/>
+            <path d="M246 100 L266 100 L266 300 L300 300 L300 330 L266 330 L266 400 L246 400 L246 330 L212 330 L212 300 L246 300 Z" fill="#c0c0c0"/>
+            <path d="M256 100 L280 150 L232 150 Z" fill="#f8d878"/>
+            <rect x="246" y="150" width="20" height="150" fill="#a0a0a0"/>
+            <rect x="212" y="300" width="88" height="30" fill="#3b82f6" stroke="#000" stroke-width="5"/>
+            <circle cx="256" cy="315" r="8" fill="#f8d878"/>
+        </svg>`;
+        
+        const iconUrl = "data:image/svg+xml;base64," + btoa(iconSVG);
+
         const manifest = {
             "name": "333 Print Quest",
             "short_name": "PrintQuest",
@@ -16,24 +33,28 @@
             "background_color": "#1f2416",
             "theme_color": "#1f2416",
             "orientation": "portrait",
-            "icons": [{
-                "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%231f2416'/%3E%3Cpath d='M256 32 L320 96 L288 128 L352 192 L320 224 L384 288 L256 416 L128 288 L192 224 L160 192 L224 128 L192 96 Z' fill='%23f8d878' stroke='%23603813' stroke-width='20'/%3E%3Cpath d='M256 416 L256 480' stroke='%23f8d878' stroke-width='40'/%3E%3C/svg%3E",
-                "sizes": "512x512",
-                "type": "image/svg+xml"
-            }]
+            "icons": [
+                {
+                    "src": iconUrl,
+                    "sizes": "192x192 512x512",
+                    "type": "image/svg+xml",
+                    "purpose": "any maskable" 
+                }
+            ]
         };
-        const stringManifest = JSON.stringify(manifest);
-        const blob = new Blob([stringManifest], {type: 'application/json'});
+        
+        // Injeta o manifesto dinamicamente
+        const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
         const manifestURL = URL.createObjectURL(blob);
-        document.querySelector('#manifest-placeholder').setAttribute('href', manifestURL);
+        document.write(`<link rel="manifest" href="${manifestURL}">`);
+        document.write(`<link rel="icon" type="image/svg+xml" href="${iconUrl}">`);
+        document.write(`<link rel="apple-touch-icon" href="${iconUrl}">`);
     </script>
 
-    <!-- PWA: META TAGS iOS/MOBILE -->
+    <!-- Meta Tags para iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Print Quest">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%231f2416'/%3E%3Cpath d='M256 32 L320 96 L288 128 L352 192 L320 224 L384 288 L256 416 L128 288 L192 224 L160 192 L224 128 L192 96 Z' fill='%23f8d878' stroke='%23603813' stroke-width='20'/%3E%3C/svg%3E">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%231f2416'/%3E%3Cpath d='M256 32 L320 96 L288 128 L352 192 L320 224 L384 288 L256 416 L128 288 L192 224 L160 192 L224 128 L192 96 Z' fill='%23f8d878' stroke='%23603813' stroke-width='20'/%3E%3C/svg%3E">
 
     <!-- 1. FERRAMENTAS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -48,7 +69,7 @@
     <!-- 3. FONTES RETRO -->
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 
-    <!-- 4. ESTILOS ZELDA -->
+    <!-- 4. ESTILOS -->
     <style>
         :root {
             --zelda-bg: #1f2416;         
@@ -65,7 +86,7 @@
             font-family: 'VT323', monospace; 
             color: var(--zelda-paper);
             -webkit-tap-highlight-color: transparent;
-            overscroll-behavior-y: none; /* Evita pull-to-refresh no app */
+            overscroll-behavior-y: none;
         }
         
         .font-retro { font-family: 'Press Start 2P', cursive; }
@@ -111,14 +132,12 @@
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--zelda-bg); }
         ::-webkit-scrollbar-thumb { background: var(--zelda-gold); border: 1px solid var(--zelda-brown); border-radius: 4px; }
         
         #error-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #800000; color: white; padding: 2rem; z-index: 9999; font-family: monospace; }
         
-        /* Ajuste para Notch do iPhone */
         header { padding-top: env(safe-area-inset-top); }
         main { padding-bottom: env(safe-area-inset-bottom); }
     </style>
@@ -494,7 +513,7 @@
                                     </div>
                                     <div className="grid grid-cols-3 gap-4">
                                         <div><label className="block font-term text-gray-500">Peça (g)</label><input type="number" className="retro-input w-full text-right" value={inputs.pesoPeca} onChange={e => setInputs({...inputs, pesoPeca: Number(e.target.value)})} /></div>
-                                        <div><label className="block font-term text-gray-500">Suporte</label><input type="number" className="retro-input w-full text-right text-[#e60012]" value={inputs.pesoSuporte} onChange={e => setInputs({...inputs, pesoSuporte: Number(e.target.value)})} /></div>
+                                        <div><label className="block font-term text-gray-500">Suporte</label><input type="number" className="retro-input w-full text-right text-red-600" value={inputs.pesoSuporte} onChange={e => setInputs({...inputs, pesoSuporte: Number(e.target.value)})} /></div>
                                         <div><label className="block font-term text-gray-500">Tempo (h)</label><input type="number" className="retro-input w-full text-right" value={inputs.tempoPrint} onChange={e => setInputs({...inputs, tempoPrint: Number(e.target.value)})} /></div>
                                     </div>
                                 </div>
@@ -515,7 +534,7 @@
                                 <div className="space-y-4">
                                     <div><label className="block font-term text-gray-500">Canal</label><select className="retro-input w-full" value={inputs.marketplaceId} onChange={e => setInputs({...inputs, marketplaceId: e.target.value})}>{db.marketplaces?.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></div>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div><label className="block font-term text-[#0078d7]">Margem %</label><input type="number" className="retro-input w-full text-right text-[#0078d7] font-bold" value={inputs.margemLucro} onChange={e => setInputs({...inputs, margemLucro: Number(e.target.value)})} /></div>
+                                        <div><label className="block font-term text-blue-600">Margem %</label><input type="number" className="retro-input w-full text-right text-blue-800 font-bold" value={inputs.margemLucro} onChange={e => setInputs({...inputs, margemLucro: Number(e.target.value)})} /></div>
                                         <div><label className="block font-term text-gray-500">Mkt (R$)</label><input type="number" className="retro-input w-full text-right" value={inputs.investimentoMkt} onChange={e => setInputs({...inputs, investimentoMkt: Number(e.target.value)})} /></div>
                                     </div>
                                 </div>
